@@ -34,7 +34,6 @@ def fetch_and_extract_text(file_url: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"File processing failed: {e}")
 
-
 def extract_pdf(path: str) -> str:
     try:
         with pdfplumber.open(path) as pdf:
@@ -42,14 +41,12 @@ def extract_pdf(path: str) -> str:
     except Exception as e:
         raise Exception(f"PDF extraction failed: {e}")
 
-
 def extract_docx(path: str) -> str:
     try:
         doc = docx.Document(path)
         return "\n".join(para.text for para in doc.paragraphs)
     except Exception as e:
         raise Exception(f"DOCX extraction failed: {e}")
-
 
 def extract_txt(path: str) -> str:
     try:
