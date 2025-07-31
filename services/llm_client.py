@@ -15,7 +15,7 @@ async def process_single_query(question: str, index_name: str, namespace: str = 
     try:
         query_embed = await get_query_embedding(question)
 
-        index = pc.Index(index_name)  # ✅ fix: define index here
+        index = pc.Index(index_name)  
         response = index.query(
             vector=query_embed,
             top_k=TOP_K,
@@ -33,7 +33,7 @@ async def process_single_query(question: str, index_name: str, namespace: str = 
             relevant_matches = matches[:1]
 
         if not relevant_matches:
-            return "No relevant information found."
+            return "no info here"
 
         context = "\n\n".join(m["metadata"]["text"] for m in relevant_matches)
         prompt = build_prompt(context, question)

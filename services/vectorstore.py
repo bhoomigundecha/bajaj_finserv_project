@@ -30,7 +30,7 @@ def embed_chunks_store(index_name: str, chunks: list[str]):
     batch_size = 100
     for i in range(0, len(vectors), batch_size):
         index.upsert(vectors=vectors[i:i + batch_size])
-    print(f"✅ Stored {len(chunks)} chunks in index: {index_name}")
+    print(f" store {len(chunks)}  index: {index_name}")
 
 def get_embedding(text: str) -> list[float]:
     response = openai.Embedding.create(
