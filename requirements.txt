@@ -7,3 +7,6 @@ more-itertools
 pydantic
 requests
 python-dotenv
+
+pdfplumber
+python-docx
