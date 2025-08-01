@@ -5,3 +5,4 @@ openai
 more-itertools
 python-multipart
 pydantic
+requests
