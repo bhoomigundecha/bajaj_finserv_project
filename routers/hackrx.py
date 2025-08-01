@@ -13,7 +13,7 @@ async def run_analysis(request: AnalyzeRequest):
         raw_text = fetch_and_extract_text(request.documents)
         chunks = chunk_text(raw_text)
 
-        doc_id = "doc"  # or hash of request.documents
+        doc_id = "doc"  
         ensure_collection()
         embed_chunks_store(doc_id, chunks)
 
