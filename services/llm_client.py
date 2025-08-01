@@ -7,8 +7,8 @@ import asyncio
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 openai_client = OpenAI()
 
-TOP_K = 7  # increased from 5 to 10
-SCORE_THRESHOLD = 0.4  # reduced from 0.6 to be more permissive
+TOP_K = 7  # save the day pls
+SCORE_THRESHOLD = 0.4  
 COLLECTION_NAME = "insurance-policies"
 
 async def process_single_query(question: str, doc_id: str) -> str:
