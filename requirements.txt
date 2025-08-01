@@ -8,3 +8,5 @@ pydantic
 requests
 pdfplumber
 python-docx
+python-dotenv
+
