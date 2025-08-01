@@ -7,19 +7,20 @@ import asyncio
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 openai_client = OpenAI()
 
-TOP_K = 5
+TOP_K = 7  # increased from 5 to 10
+SCORE_THRESHOLD = 0.4  # reduced from 0.6 to be more permissive
 COLLECTION_NAME = "insurance-policies"
 
 async def process_single_query(question: str, doc_id: str) -> str:
     try:
-        print(f"\n Running query: {question}")
+        print(f"\nRunning query: {question}")
         query_embed = await get_query_embedding(question)
 
         response = qdrant.search(
             collection_name=COLLECTION_NAME,
             query_vector=query_embed,
             limit=TOP_K,
-            score_threshold=0.6,
+            score_threshold=SCORE_THRESHOLD,
             query_filter=Filter(
                 must=[FieldCondition(
                     key="doc_id",
@@ -29,10 +30,11 @@ async def process_single_query(question: str, doc_id: str) -> str:
             with_payload=True
         )
 
-        print(f"🔍 Matches found: {len(response)}")
+        print(f"Matches found: {len(response)}")
+        for r in response:
+            print(f" • Score: {r.score:.4f} → Chunk: {r.payload['text'][:80]}...")
 
         if not response:
-            print("⚠️ No relevant matches.")
             return "No relevant information found."
 
         context = "\n\n".join(match.payload["text"] for match in response)
@@ -52,11 +54,11 @@ async def get_query_embedding(text: str) -> list[float]:
         ).data[0].embedding
     return await asyncio.to_thread(_get)
 
-# ✅ Prompt template
 def build_prompt(context: str, question: str) -> str:
     return f"""You are a smart assistant trained to extract insurance-related details from policy documents.
 
-Based on the [Context] provided, answer the [User Question] clearly and precisely. If the answer is not directly present, reply with \"No relevant information found.\"
+Based on the [Context] provided, answer the [User Question] clearly and precisely.
+If the answer is not directly present, reply with "No relevant information found."
 
 [Context]:
 {context}
@@ -65,11 +67,10 @@ Based on the [Context] provided, answer the [User Question] clearly and precisel
 
 [Answer]:"""
 
-# ✅ LLM Call
 async def call_llm(prompt: str) -> str:
     def _call():
         response = openai_client.chat.completions.create(
-            model=FINE_TUNED_MODEL,
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant trained to analyze insurance policies."},
                 {"role": "user", "content": prompt},

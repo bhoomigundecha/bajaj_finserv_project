@@ -20,7 +20,7 @@ def ensure_collection():
     print(" Ensuring Qdrant collection and index...")
     collections = [c.name for c in client.get_collections().collections]
     if COLLECTION_NAME not in collections:
-        print(" Creating collection...")
+        print("Creating collection...")
         client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
@@ -36,6 +36,7 @@ def ensure_collection():
 def embed_chunks_store(doc_id: str, chunks: list[str]):
     print(f" Embedding {len(chunks)} chunks for doc_id: {doc_id}")
     vectors = []
+
     for i, chunk in enumerate(chunks):
         embedding = get_embedding(chunk)
         vectors.append(PointStruct(
@@ -45,7 +46,6 @@ def embed_chunks_store(doc_id: str, chunks: list[str]):
         ))
 
     print(f" Deleting existing vectors for doc_id: {doc_id}")
-    
     client.delete(
         collection_name=COLLECTION_NAME,
         points_selector=Filter(
@@ -58,11 +58,11 @@ def embed_chunks_store(doc_id: str, chunks: list[str]):
         )
     )
 
-    print(" Upserting chunks to Qdrant...")
+    print(" Upserting new vectors to Qdrant...")
     for batch in chunked(vectors, 100):
         client.upsert(collection_name=COLLECTION_NAME, points=batch)
 
-    print(" All chunks stored successfully.")
+    print("All chunks embedded and stored.")
 
 def get_embedding(text: str) -> list[float]:
     response = openai_client.embeddings.create(
