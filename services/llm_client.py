@@ -1,53 +1,60 @@
-from config import OPENAI_API_KEY, FINE_TUNED_MODEL, PINECONE_API_KEY
-from pinecone import Pinecone
+from config import OPENAI_API_KEY, FINE_TUNED_MODEL, QDRANT_API_KEY, QDRANT_URL
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchValue
 import openai
 import asyncio
 
 openai.api_key = OPENAI_API_KEY
 client = openai
-pc = Pinecone(api_key=PINECONE_API_KEY)
+
 TOP_K = 5
+COLLECTION_NAME = "insurance-policies"
+qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
-async def process_single_query(question: str, index_name: str, namespace: str = "") -> str:
-    RELEVANCE_THRESHOLD = 0.75
-    DEBUG_MATCH_SCORES = False
 
+async def process_single_query(question: str, doc_id: str) -> str:
     try:
+        print(f"\n Running query: {question}")
         query_embed = await get_query_embedding(question)
 
-        index = pc.Index(index_name)  
-        response = index.query(
-            vector=query_embed,
-            top_k=TOP_K,
-            include_metadata=True,
-            namespace=namespace
+        response = qdrant.search(
+            collection_name=COLLECTION_NAME,
+            query_vector=query_embed,
+            limit=TOP_K,
+            score_threshold=0.6,
+            query_filter=Filter(
+                must=[FieldCondition(
+                    key="doc_id",
+                    match=MatchValue(value=doc_id)
+                )]
+            ),
+            with_payload=True
         )
 
-        matches = response.get("matches", [])
-        if DEBUG_MATCH_SCORES:
-            for m in matches:
-                print(f"Score: {m['score']:.4f} | Snippet: {m['metadata']['text'][:80]}")
+        print(f"🔍 Matches found: {len(response)}")
 
-        relevant_matches = [m for m in matches if m['score'] >= RELEVANCE_THRESHOLD]
-        if not relevant_matches and matches:
-            relevant_matches = matches[:1]
+        if not response:
+            print("⚠️ No relevant matches.")
+            return "No relevant information found."
 
-        if not relevant_matches:
-            return "no info here"
-
-        context = "\n\n".join(m["metadata"]["text"] for m in relevant_matches)
+        context = "\n\n".join(match.payload["text"] for match in response)
         prompt = build_prompt(context, question)
 
         return await call_llm(prompt)
 
     except Exception as e:
+        print(f" Exception in query: {e}")
         return f"Error: {str(e)}"
 
 async def get_query_embedding(text: str) -> list[float]:
     def _get():
-        return client.Embedding.create(input=text, model="text-embedding-ada-002")["data"][0]["embedding"]
+        return client.Embedding.create(
+            input=text,
+            model="text-embedding-ada-002"
+        )["data"][0]["embedding"]
     return await asyncio.to_thread(_get)
 
+# ✅ Prompt template
 def build_prompt(context: str, question: str) -> str:
     return f"""You are a smart assistant trained to extract insurance-related details from policy documents.
 
@@ -60,6 +67,7 @@ Based on the [Context] provided, answer the [User Question] clearly and precisel
 
 [Answer]:"""
 
+# ✅ LLM Call
 async def call_llm(prompt: str) -> str:
     def _call():
         response = client.ChatCompletion.create(

@@ -1,10 +1,11 @@
-from config import CHUNK_SIZE, CHUNK_OVERLAP
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
+def chunk_text(text: str, chunk_size: int = 700, overlap: int = 150) -> list[str]:
+    words = text.split()
     chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + chunk_size, len(text))
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-    return [chunk.strip() for chunk in chunks if chunk.strip()]
+
+    for start in range(0, len(words), chunk_size - overlap):
+        end = start + chunk_size
+        chunk = " ".join(words[start:end])
+        chunks.append(chunk)
+
+    return chunks

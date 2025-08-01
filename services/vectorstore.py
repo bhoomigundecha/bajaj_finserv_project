@@ -1,36 +1,68 @@
+from qdrant_client import QdrantClient
+from qdrant_client.models import (
+    Distance,
+    VectorParams,
+    PointStruct,
+    PayloadSchemaType,
+    Filter,
+    FieldCondition,
+    MatchValue,
+)
+from config import QDRANT_API_KEY, QDRANT_URL
+from more_itertools import chunked
 import openai
-import uuid
-from config import OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_ENV
-from pinecone import Pinecone, ServerlessSpec
 
-openai.api_key = OPENAI_API_KEY
-pc = Pinecone(api_key=PINECONE_API_KEY)
+client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+COLLECTION_NAME = "insurance-policies"
 
-def create_temp_index() -> str:
-    index_name = f"policy-{uuid.uuid4().hex[:8]}"
-    pc.create_index(
-        name=index_name,
-        dimension=1536,
-        metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region=PINECONE_ENV)
+def ensure_collection():
+    print(" Ensuring Qdrant collection and index...")
+    collections = [c.name for c in client.get_collections().collections]
+    if COLLECTION_NAME not in collections:
+        print(" Creating collection...")
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
+        )
+
+    print(" Creating payload index on 'doc_id'...")
+    client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="doc_id",
+        field_schema=PayloadSchemaType.KEYWORD
     )
-    return index_name
 
-def embed_chunks_store(index_name: str, chunks: list[str]):
-    index = pc.Index(index_name)
+def embed_chunks_store(doc_id: str, chunks: list[str]):
+    print(f" Embedding {len(chunks)} chunks for doc_id: {doc_id}")
     vectors = []
     for i, chunk in enumerate(chunks):
         embedding = get_embedding(chunk)
-        vectors.append({
-            "id": f"chunk-{i}",
-            "values": embedding,
-            "metadata": {"text": chunk}
-        })
+        vectors.append(PointStruct(
+            id=i,
+            vector=embedding,
+            payload={"text": chunk, "doc_id": doc_id}
+        ))
 
-    batch_size = 100
-    for i in range(0, len(vectors), batch_size):
-        index.upsert(vectors=vectors[i:i + batch_size])
-    print(f" store {len(chunks)}  index: {index_name}")
+    print(f" Deleting existing vectors for doc_id: {doc_id}")
+    
+    client.delete(
+        collection_name=COLLECTION_NAME,
+        points_selector=Filter(
+            must=[
+                FieldCondition(
+                    key="doc_id",
+                    match=MatchValue(value=doc_id)
+                )
+            ]
+        )
+    )
+
+
+    print(" Upserting chunks to Qdrant...")
+    for batch in chunked(vectors, 100):
+        client.upsert(collection_name=COLLECTION_NAME, points=batch)
+
+    print(" All chunks stored successfully.")
 
 def get_embedding(text: str) -> list[float]:
     response = openai.Embedding.create(

@@ -1,8 +1,7 @@
 fastapi
 uvicorn
-python-docx
-PyMuPDF
-requests
+qdrant-client
 openai
-pinecone
-python-dotenv
+more-itertools
+python-multipart
+pydantic
