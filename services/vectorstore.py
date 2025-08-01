@@ -10,9 +10,10 @@ from qdrant_client.models import (
 )
 from config import QDRANT_API_KEY, QDRANT_URL
 from more_itertools import chunked
-import openai
+from openai import OpenAI
 
 client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+openai_client = OpenAI()
 COLLECTION_NAME = "insurance-policies"
 
 def ensure_collection():
@@ -57,7 +58,6 @@ def embed_chunks_store(doc_id: str, chunks: list[str]):
         )
     )
 
-
     print(" Upserting chunks to Qdrant...")
     for batch in chunked(vectors, 100):
         client.upsert(collection_name=COLLECTION_NAME, points=batch)
@@ -65,7 +65,7 @@ def embed_chunks_store(doc_id: str, chunks: list[str]):
     print(" All chunks stored successfully.")
 
 def get_embedding(text: str) -> list[float]:
-    response = openai.Embedding.create(
+    response = openai_client.embeddings.create(
         input=text,
         model="text-embedding-ada-002"
     )
