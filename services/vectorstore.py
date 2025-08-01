@@ -26,7 +26,7 @@ def ensure_collection():
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
         )
 
-    print(" Creating payload index on 'doc_id'...")
+    print(" Creatingdoc_id...")
     client.create_payload_index(
         collection_name=COLLECTION_NAME,
         field_name="doc_id",
@@ -45,7 +45,7 @@ def embed_chunks_store(doc_id: str, chunks: list[str]):
             payload={"text": chunk, "doc_id": doc_id}
         ))
 
-    print(f" Deleting existing vectors for doc_id: {doc_id}")
+    print(f" Deleting:{doc_id}")
     client.delete(
         collection_name=COLLECTION_NAME,
         points_selector=Filter(
@@ -58,7 +58,7 @@ def embed_chunks_store(doc_id: str, chunks: list[str]):
         )
     )
 
-    print(" Upserting new vectors to Qdrant...")
+    print(" new vecs for quad.")
     for batch in chunked(vectors, 100):
         client.upsert(collection_name=COLLECTION_NAME, points=batch)
 
