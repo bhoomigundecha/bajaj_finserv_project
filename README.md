@@ -1,4 +1,4 @@
-# IntraDocAI 
+# IntraDocAI (Project Submitted for the Bajaj Finserv GenAI Hackathon)
 
 **IntraDocAI** is a **Retrieval-Augmented Generation (RAG) system** that analyzes company or official documents and provides accurate answers to **queries**.  
 It combines vector search with LLM reasoning to ensure context-aware, reliable responses. Useful for analysing company documents and agreements in minutes. 
